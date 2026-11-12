@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">StudyLock</string>
+    <string name="a11y_desc">StudyLock uses this only to notice when an app you chose to block is opened during a study session, and covers it with a reminder. It does not read or store anything on your screen.</string>
+</resources>
