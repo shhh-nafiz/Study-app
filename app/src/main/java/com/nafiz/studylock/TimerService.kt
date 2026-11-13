@@ -59,7 +59,12 @@ class TimerService : Service() {
             val show = PendingIntent.getActivity(
                 c, 4, Intent(c, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE
             )
-            am.setAlarmClock(AlarmManager.AlarmClockInfo(endMs, show), firePending(c))
+            try {
+                am.setAlarmClock(AlarmManager.AlarmClockInfo(endMs, show), firePending(c))
+            } catch (e: Exception) {
+                try { am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, endMs, firePending(c)) }
+                catch (e2: Exception) { }
+            }
         }
 
         fun cancelAlarm(c: Context) {
@@ -112,6 +117,10 @@ class TimerService : Service() {
         try {
             startFg(buildNotification(end))
         } catch (e: Exception) {
+            // Could not become a foreground service: record why, and don't leave a half-started session.
+            Store.setCrash(this, "Timer service failed to start:\n" + android.util.Log.getStackTraceString(e))
+            Store.clearAlarm(this)
+            Store.finish(this)
             stopSelf()
             return START_NOT_STICKY
         }

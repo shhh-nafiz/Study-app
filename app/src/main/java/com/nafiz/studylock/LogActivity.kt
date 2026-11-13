@@ -1,6 +1,7 @@
 package com.nafiz.studylock
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.LinearLayout
@@ -104,13 +105,18 @@ class LogActivity : Activity() {
             val label = if (k == todayKey) "Today" else try {
                 outFmt.format(inFmt.parse(k)!!)
             } catch (e: Exception) { k }
-            body.addView(line(label, fmtDur(secs), 16f, C.TEXT, C.ACCENT, true), lp(if (idx == 0) 8 else 14))
+            body.addView(
+                line(label, fmtDur(secs), 16f, C.TEXT, C.ACCENT, true) {
+                    confirm("Delete everything logged on $label (${fmtDur(secs)})?") { Store.deleteDay(this, k) }
+                },
+                lp(if (idx == 0) 8 else 14)
+            )
 
             if (running && Store.dayKey(Store.startMs(this)) == k) {
                 val st = Store.startMs(this)
                 val el = (System.currentTimeMillis() - st) / 1000
                 body.addView(
-                    line("${clockFmt.format(Date(st))} – now  ·  in progress", fmtDur(el), 13f, C.ACCENT, C.MUTED, false),
+                    line("${clockFmt.format(Date(st))} – now  ·  in progress", fmtDur(el), 13f, C.ACCENT, C.MUTED, false, null),
                     lp(2)
                 )
             }
@@ -118,11 +124,30 @@ class LogActivity : Activity() {
                 val end = clockFmt.format(Date(s.start + s.secs * 1000))
                 val early = if (s.planned - s.secs > 30) "  ·  ended early" else ""
                 body.addView(
-                    line("${clockFmt.format(Date(s.start))} – $end$early", fmtDur(s.secs), 13f, C.MUTED, C.MUTED, false),
+                    line("${clockFmt.format(Date(s.start))} – $end$early", fmtDur(s.secs), 13f, C.MUTED, C.MUTED, false) {
+                        confirm("Delete this ${fmtDur(s.secs)} session from ${clockFmt.format(Date(s.start))}?") {
+                            Store.deleteSession(this, s.start)
+                        }
+                    },
                     lp(2)
                 )
             }
         }
+
+        body.addView(
+            button("Clear entire log", C.CARD, C.DANGER) {
+                confirm("Delete your whole study log? This can't be undone.") { Store.clearLog(this) }
+            },
+            lp(32)
+        )
+    }
+
+    private fun confirm(msg: String, then: () -> Unit) {
+        AlertDialog.Builder(this)
+            .setMessage(msg)
+            .setPositiveButton("Delete") { _, _ -> then(); render() }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun statCard(title: String, value: String): LinearLayout =
@@ -134,14 +159,25 @@ class LogActivity : Activity() {
             addView(tv(value, 18f, C.TEXT, true), lp(4))
         }
 
-    private fun line(left: String, right: String, sp: Float, lc: Int, rc: Int, bold: Boolean): LinearLayout {
+    private fun line(
+        left: String, right: String, sp: Float, lc: Int, rc: Int, bold: Boolean,
+        onDelete: (() -> Unit)?
+    ): LinearLayout {
         val l = LinearLayout(this)
         l.orientation = LinearLayout.HORIZONTAL
         l.gravity = Gravity.CENTER_VERTICAL
-        l.setPadding(0, dp(6), 0, dp(6))
+        l.setPadding(0, dp(2), 0, dp(2))
         l.addView(tv(left, sp, lc, bold),
             LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
         l.addView(tv(right, sp, rc, bold))
+        if (onDelete != null) {
+            val x = tv("✕", sp + 2f, C.MUTED)
+            x.setPadding(dp(16), dp(10), dp(4), dp(10))
+            x.setOnClickListener { onDelete() }
+            l.addView(x)
+        } else {
+            l.addView(tv("", sp + 2f, C.MUTED).apply { setPadding(dp(16), dp(10), dp(4), dp(10)) })
+        }
         return l
     }
 }

@@ -27,6 +27,7 @@ class MainActivity : Activity() {
     private lateinit var wheelH: WheelPicker
     private lateinit var wheelM: WheelPicker
     private var ringShown = false
+    private lateinit var crashView: TextView
     private lateinit var action: TextView
     private lateinit var appsRow: TextView
     private lateinit var logRow: TextView
@@ -45,7 +46,14 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(24), dp(32), dp(24), dp(24))
         }
-        root.addView(tv("StudyLock", 15f, C.MUTED), lp())
+        crashView = tv("", 11f, C.DANGER).apply {
+            background = pill(C.CARD)
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            visibility = android.view.View.GONE
+            setOnClickListener { Store.clearCrash(context); visibility = android.view.View.GONE }
+        }
+        root.addView(crashView, lp())
+        root.addView(tv("StudyLock", 15f, C.MUTED), lp(8))
 
         clock = tv("", 76f, C.TEXT).apply {
             gravity = Gravity.CENTER
@@ -165,6 +173,13 @@ class MainActivity : Activity() {
     private fun refresh() {
         Store.settle(this)
         val running = Store.isRunning(this)
+
+        val cr = Store.crash(this)
+        if (cr == null) crashView.visibility = android.view.View.GONE
+        else {
+            crashView.text = "StudyLock hit an error. Please screenshot this and send it to Claude (tap to dismiss):\n\n$cr"
+            crashView.visibility = android.view.View.VISIBLE
+        }
 
         // Alarm is sounding: bring up the full-screen "Time's up" screen once.
         if (Store.isRinging(this)) {

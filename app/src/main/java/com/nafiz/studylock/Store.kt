@@ -137,6 +137,54 @@ object Store {
         return out.sortedByDescending { it.start }
     }
 
+    // ---- deleting log entries ----
+
+    /** Removes one finished session and takes its time off that day's total. */
+    @Synchronized
+    fun deleteSession(c: Context, start: Long) {
+        val all = readSessions(c)
+        val keep = JSONArray()
+        var found = false
+        var secs = 0L
+        for (i in 0 until all.length()) {
+            val o = all.optJSONObject(i) ?: continue
+            if (!found && o.optLong("s") == start) { found = true; secs = o.optLong("d"); continue }
+            keep.put(o)
+        }
+        if (!found) return
+        val log = readLog(c)
+        val k = dayKey(start)
+        val left = log.optLong(k, 0L) - secs
+        if (left > 0) log.put(k, left) else log.remove(k)
+        p(c).edit().putString("log", log.toString()).putString("sessions", keep.toString()).apply()
+    }
+
+    /** Removes a whole day (its total and all its sessions). */
+    @Synchronized
+    fun deleteDay(c: Context, key: String) {
+        val all = readSessions(c)
+        val keep = JSONArray()
+        for (i in 0 until all.length()) {
+            val o = all.optJSONObject(i) ?: continue
+            if (dayKey(o.optLong("s")) != key) keep.put(o)
+        }
+        val log = readLog(c)
+        log.remove(key)
+        p(c).edit().putString("log", log.toString()).putString("sessions", keep.toString()).apply()
+    }
+
+    @Synchronized
+    fun clearLog(c: Context) {
+        p(c).edit().remove("log").remove("sessions").apply()
+    }
+
+    // ---- crash report shown inside the app ----
+    fun crash(c: Context): String? = p(c).getString("crash", null)
+    fun setCrash(c: Context, msg: String) {
+        p(c).edit().putString("crash", msg.take(900)).commit() // commit: the process may be dying
+    }
+    fun clearCrash(c: Context) { p(c).edit().remove("crash").apply() }
+
     fun todaySeconds(c: Context): Long {
         val k = dayKey(System.currentTimeMillis())
         return log(c).firstOrNull { it.first == k }?.second ?: 0L
