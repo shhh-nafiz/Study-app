@@ -7,6 +7,7 @@ import android.util.Log
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
+        C.load(this)
         val prev = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { t, e ->
             try { Store.setCrash(this, Log.getStackTraceString(e)) } catch (x: Throwable) { }

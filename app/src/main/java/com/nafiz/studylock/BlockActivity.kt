@@ -25,6 +25,7 @@ class BlockActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyTheme()
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -36,7 +37,7 @@ class BlockActivity : Activity() {
         left = tv("", 64f, C.ACCENT).apply { gravity = Gravity.CENTER }
         root.addView(left, lp(32))
         root.addView(tv("left in your study session", 14f, C.MUTED).apply { gravity = Gravity.CENTER }, lp(0))
-        root.addView(button("Go home", C.ACCENT, C.BG) { goHome() }, lp(40))
+        root.addView(button("Go home", C.ACCENT, C.ON_ACCENT) { goHome() }, lp(40))
         setContentView(root)
         show(intent)
     }

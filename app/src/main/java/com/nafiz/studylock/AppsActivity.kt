@@ -15,9 +15,16 @@ import android.widget.Toast
 class AppsActivity : Activity() {
     private val selected = HashSet<String>()
     private lateinit var list: LinearLayout
+    private var themeVer = C.version
+
+    override fun onResume() {
+        super.onResume()
+        if (themeVer != C.version) recreate()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyTheme()
         selected.addAll(Store.blocked(this))
 
         val root = LinearLayout(this).apply {

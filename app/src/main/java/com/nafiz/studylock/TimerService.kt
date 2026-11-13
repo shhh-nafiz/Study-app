@@ -41,7 +41,6 @@ class TimerService : Service() {
         const val ACTION_STOP = "com.nafiz.studylock.STOP"       // end the session early
         const val ACTION_FIRE = "com.nafiz.studylock.FIRE"       // the timer reached zero
         const val ACTION_DISMISS = "com.nafiz.studylock.DISMISS" // silence the alarm
-        const val RING_MS = 2 * 60_000L
 
         fun start(c: Context) {
             c.startForegroundService(Intent(c, TimerService::class.java))
@@ -164,7 +163,7 @@ class TimerService : Service() {
         ringing = true
         Store.setRinging(this, true)
         startAlarmSound()
-        h.postDelayed(autoStop, RING_MS)
+        h.postDelayed(autoStop, Store.ringMs(this))
     }
 
     private fun ringTimedOut() {
@@ -176,18 +175,20 @@ class TimerService : Service() {
 
     @Suppress("DEPRECATION")
     private fun startAlarmSound() {
-        val kinds = intArrayOf(
-            RingtoneManager.TYPE_ALARM,
-            RingtoneManager.TYPE_NOTIFICATION,
-            RingtoneManager.TYPE_RINGTONE
-        )
         val attrs = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_ALARM)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
             .build()
-        for (kind in kinds) {
+        // The sound picked in Settings first, then built-in fallbacks (unless "silent" was chosen).
+        val candidates = ArrayList<android.net.Uri>()
+        Store.alarmSound(this)?.let { candidates.add(it) }
+        if (Store.alarmUri(this) != "silent") {
+            for (kind in intArrayOf(
+                RingtoneManager.TYPE_ALARM, RingtoneManager.TYPE_NOTIFICATION, RingtoneManager.TYPE_RINGTONE
+            )) RingtoneManager.getDefaultUri(kind)?.let { candidates.add(it) }
+        }
+        for (uri in candidates) {
             try {
-                val uri = RingtoneManager.getDefaultUri(kind) ?: continue
                 val mp = MediaPlayer()
                 mp.setAudioAttributes(attrs)
                 mp.setDataSource(this, uri)
@@ -201,10 +202,12 @@ class TimerService : Service() {
                 // try the next sound
             }
         }
-        try {
-            val v = getSystemService(Vibrator::class.java)
-            v?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 700, 500), 0), attrs)
-        } catch (e: Exception) {
+        if (Store.vibrate(this)) {
+            try {
+                val v = getSystemService(Vibrator::class.java)
+                v?.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 700, 500), 0), attrs)
+            } catch (e: Exception) {
+            }
         }
     }
 

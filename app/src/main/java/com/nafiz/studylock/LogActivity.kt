@@ -2,6 +2,7 @@ package com.nafiz.studylock
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.content.Intent
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.LinearLayout
@@ -15,9 +16,16 @@ import java.util.Locale
 class LogActivity : Activity() {
     private var range = 7
     private lateinit var body: LinearLayout
+    private var themeVer = C.version
+
+    override fun onResume() {
+        super.onResume()
+        if (themeVer != C.version) recreate()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyTheme()
         body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(24), dp(24), dp(24), dp(32))
@@ -39,7 +47,7 @@ class LogActivity : Activity() {
         listOf(7 to "7 days", 30 to "30 days").forEachIndexed { i, (n, label) ->
             val on = range == n
             toggle.addView(
-                button(label, if (on) C.ACCENT else C.CARD, if (on) C.BG else C.MUTED, 8) {
+                button(label, if (on) C.ACCENT else C.CARD, if (on) C.ON_ACCENT else C.MUTED, 8) {
                     range = n
                     render()
                 },
@@ -83,11 +91,26 @@ class LogActivity : Activity() {
         val caption = tv(bars.last().full, 14f, C.TEXT, true)
         card.addView(caption, lp())
         val chart = BarChartView(this)
-        chart.setBars(bars, bars.size - 1)
+        val goalSecs = Store.goalMin(this) * 60L
+        chart.setBars(bars, bars.size - 1, goalSecs)
         chart.onPick = { caption.text = bars[it].full }
         card.addView(chart, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, dp(220)).apply { topMargin = dp(8) })
         body.addView(card, lp(12))
+
+        val streak = Buddy.streak(this)
+        val notes = ArrayList<String>()
+        if (goalSecs > 0) notes.add("Dashed line = daily goal (${fmtDur(goalSecs)}). Reached ${bars.count { it.secs >= goalSecs }} of $range days.")
+        if (streak >= 2) notes.add("Current streak: $streak days.")
+        if (notes.isNotEmpty()) body.addView(tv(notes.joinToString("  "), 13f, C.MUTED), lp(10))
+
+        val weekSecs = (0 until 7).sumOf { totals[Store.dayKey(Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -it) }.timeInMillis)] ?: 0L }
+        body.addView(row("Share this week   ›") {
+            val msg = "I studied ${fmtDur(weekSecs)} in the last 7 days" +
+                (if (streak >= 2) " ($streak-day streak)" else "") + ". Tracked with StudyLock."
+            startActivity(Intent.createChooser(
+                Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, msg), "Share"))
+        }, lp(12))
 
         // Dated history
         body.addView(tv("History", 18f, C.TEXT, true), lp(28))

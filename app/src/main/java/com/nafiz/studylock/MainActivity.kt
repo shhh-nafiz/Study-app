@@ -27,6 +27,9 @@ class MainActivity : Activity() {
     private lateinit var wheelH: WheelPicker
     private lateinit var wheelM: WheelPicker
     private var ringShown = false
+    private var themeVer = C.version
+    private lateinit var goalBar: GoalBar
+    private lateinit var settingsRow: TextView
     private lateinit var crashView: TextView
     private lateinit var action: TextView
     private lateinit var appsRow: TextView
@@ -40,6 +43,7 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyTheme()
         minutes = Store.lastMinutes(this).coerceIn(1, 719)
 
         val root = LinearLayout(this).apply {
@@ -85,13 +89,18 @@ class MainActivity : Activity() {
         picker.addView(chips, lp(20))
         root.addView(picker, lp())
 
-        action = button("", C.ACCENT, C.BG) { onAction() }
+        action = button("", C.ACCENT, C.ON_ACCENT) { onAction() }
         root.addView(action, lp(24))
 
         appsRow = row("") { startActivity(Intent(this, AppsActivity::class.java)) }
         root.addView(appsRow, lp(28))
         logRow = row("") { startActivity(Intent(this, LogActivity::class.java)) }
         root.addView(logRow, lp(10))
+
+        goalBar = GoalBar(this)
+        root.addView(goalBar, lp(12))
+        settingsRow = row("Settings   ›") { startActivity(Intent(this, SettingsActivity::class.java)) }
+        root.addView(settingsRow, lp(10))
 
         warn = tv(
             "Blocking is off. Tap to open Accessibility settings and turn on StudyLock.\n\n" +
@@ -111,7 +120,11 @@ class MainActivity : Activity() {
         ) requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
     }
 
-    override fun onResume() { super.onResume(); h.post(loop) }
+    override fun onResume() {
+        super.onResume()
+        if (themeVer != C.version) { recreate(); return }
+        h.post(loop)
+    }
     override fun onPause() { h.removeCallbacks(loop); super.onPause() }
 
     private fun column(w: WheelPicker, label: String): LinearLayout =
@@ -194,7 +207,7 @@ class MainActivity : Activity() {
             clock.text = fmtClock(sec)
             sub.text = "remaining · selected apps are blocked"
         } else {
-            sub.text = "Set your study time"
+            sub.text = if (Store.buddy(this)) Buddy.line(this) else "Set your study time"
         }
         if (lastRunning != running) {
             lastRunning = running
@@ -204,7 +217,13 @@ class MainActivity : Activity() {
             sub.requestLayout()
             action.text = if (running) "Stop" else "Start"
             action.background = pill(if (running) C.DANGER else C.ACCENT)
+            action.setTextColor(if (running) C.BG else C.ON_ACCENT)
         }
+        val goal = Store.goalMin(this) * 60L
+        if (goal > 0) {
+            goalBar.visibility = android.view.View.VISIBLE
+            goalBar.fraction = Store.todaySeconds(this).toFloat() / goal
+        } else goalBar.visibility = android.view.View.GONE
         val n = Store.blocked(this).size
         appsRow.text = "Blocked apps   ·   $n selected   ›"
         logRow.text = "Today   ·   ${fmtDur(Store.todaySeconds(this))}   ›   log"

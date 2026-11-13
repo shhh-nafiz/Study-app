@@ -24,6 +24,7 @@ class RingActivity : Activity() {
     @Suppress("DEPRECATION")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        applyTheme()
         if (Build.VERSION.SDK_INT >= 27) {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
@@ -48,7 +49,13 @@ class RingActivity : Activity() {
             tv("Today   ·   ${fmtDur(Store.todaySeconds(this))}", 14f, C.MUTED)
                 .apply { gravity = Gravity.CENTER }, lp(6)
         )
-        root.addView(button("Stop alarm", C.ACCENT, C.BG) { stopAlarm() }, lp(48))
+        if (Store.buddy(this)) {
+            root.addView(
+                tv("Take five. Water, stretch, eyes off the screen.", 14f, C.MUTED)
+                    .apply { gravity = Gravity.CENTER }, lp(20)
+            )
+        }
+        root.addView(button("Stop alarm", C.ACCENT, C.ON_ACCENT) { stopAlarm() }, lp(48))
         setContentView(root)
     }
 

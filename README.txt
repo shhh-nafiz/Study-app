@@ -20,3 +20,11 @@ WHAT'S NEW IN 1.1
 
 NOTE: if installing over your old version fails ("App not installed"), uninstall the old
 one first (the old study log will be reset), then install the new APK.
+
+WHAT'S NEW IN 1.3
+- Settings: accent colour, background colour (incl. a light "Paper" theme), alarm sound
+  (pick any alarm tone or silent), vibration on/off, ring length, test button.
+- Daily goal with a thin progress bar and streak; one quiet line of text on the home screen
+  (can be switched off). Dashed goal line on the log chart.
+- Share this week: sends your weekly total as text to any app/friend.
+- Log entries and whole days can be deleted.

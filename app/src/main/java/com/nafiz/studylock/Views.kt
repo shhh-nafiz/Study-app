@@ -187,17 +187,20 @@ class BarChartView(ctx: Context) : View(ctx) {
     private var slot = 1f
     private var downX = 0f
     private val slop = ViewConfiguration.get(ctx).scaledTouchSlop
-    private val dim = Color.parseColor("#2F7D5E")
-    private val grid = Paint().apply {
-        color = Color.parseColor("#262A31")
-        strokeWidth = ctx.dp(1).toFloat()
+    private var goalSecs = 0L
+    private val grid = Paint().apply { strokeWidth = ctx.dp(1).toFloat() }
+    private val goalPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        strokeWidth = ctx.dp(2).toFloat()
+        style = Paint.Style.STROKE
+        pathEffect = android.graphics.DashPathEffect(floatArrayOf(ctx.dp(6).toFloat(), ctx.dp(5).toFloat()), 0f)
     }
     private val bar = Paint(Paint.ANTI_ALIAS_FLAG)
     private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = ctx.sp(11f) }
 
-    fun setBars(b: List<Bar>, selected: Int) {
+    fun setBars(b: List<Bar>, selected: Int, goal: Long = 0L) {
         bars = b
         picked = selected
+        goalSecs = goal
         invalidate()
     }
 
@@ -213,7 +216,9 @@ class BarChartView(ctx: Context) : View(ctx) {
 
     override fun onDraw(c: Canvas) {
         if (bars.isEmpty()) return
-        val (stepMin, topMin) = niceScale(bars.maxOf { it.secs })
+        val dim = C.mix(C.CARD, C.ACCENT, 0.5f)
+        grid.color = C.mix(C.CARD, C.MUTED, 0.25f)
+        val (stepMin, topMin) = niceScale(Math.max(bars.maxOf { it.secs }, goalSecs))
         val topSecs = topMin * 60f
         val ticks = (0..topMin / stepMin).map { it * stepMin }
 
@@ -229,6 +234,12 @@ class BarChartView(ctx: Context) : View(ctx) {
             val y = topPad + chartH * (1f - m * 60f / topSecs)
             c.drawLine(axisW, y, right, y, grid)
             c.drawText(fmtDur(m * 60L), axisW - context.dp(6), y + text.textSize * 0.35f, text)
+        }
+
+        if (goalSecs > 0) {
+            val gy = topPad + chartH * (1f - goalSecs / topSecs)
+            goalPaint.color = C.ACCENT
+            c.drawLine(axisW, gy, right, gy, goalPaint)
         }
 
         plotLeft = axisW
@@ -278,4 +289,27 @@ class BarChartView(ctx: Context) : View(ctx) {
     }
 
     override fun performClick(): Boolean = super.performClick()
+}
+
+/** Thin progress bar for the daily goal. */
+class GoalBar(ctx: Context) : View(ctx) {
+    var fraction: Float = 0f
+        set(v) {
+            if (v != field) { field = v; invalidate() }
+        }
+    private val p = Paint(Paint.ANTI_ALIAS_FLAG)
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        setMeasuredDimension(resolveSize(100, widthMeasureSpec), context.dp(4))
+    }
+
+    override fun onDraw(c: Canvas) {
+        val r = height / 2f
+        p.color = C.CARD
+        c.drawRoundRect(0f, 0f, width.toFloat(), height.toFloat(), r, r, p)
+        if (fraction > 0f) {
+            p.color = C.ACCENT
+            c.drawRoundRect(0f, 0f, width * Math.min(fraction, 1f), height.toFloat(), r, r, p)
+        }
+    }
 }

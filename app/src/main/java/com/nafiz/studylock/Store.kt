@@ -1,6 +1,8 @@
 package com.nafiz.studylock
 
 import android.content.Context
+import android.media.RingtoneManager
+import android.net.Uri
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
@@ -11,7 +13,6 @@ import java.util.Locale
 data class Session(val start: Long, val secs: Long, val planned: Long)
 
 object Store {
-    private const val RING_WINDOW_MS = 150_000L
     private const val MAX_SESSIONS = 1000
 
     private fun p(c: Context) =
@@ -23,6 +24,33 @@ object Store {
     fun setBlocked(c: Context, s: Set<String>) {
         p(c).edit().putStringSet("blocked", HashSet(s)).apply()
     }
+
+    // ---- appearance ----
+    fun bgIndex(c: Context): Int = p(c).getInt("bg", 0)
+    fun accentIndex(c: Context): Int = p(c).getInt("accent", 0)
+    fun setBgIndex(c: Context, i: Int) { p(c).edit().putInt("bg", i).apply() }
+    fun setAccentIndex(c: Context, i: Int) { p(c).edit().putInt("accent", i).apply() }
+
+    // ---- alarm options ----
+    /** "" = default alarm sound, "silent" = vibrate only, otherwise a sound URI. */
+    fun alarmUri(c: Context): String = p(c).getString("alarm_uri", "") ?: ""
+    fun setAlarmUri(c: Context, s: String) { p(c).edit().putString("alarm_uri", s).apply() }
+    fun alarmSound(c: Context): Uri? = when (val s = alarmUri(c)) {
+        "silent" -> null
+        "" -> RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
+        else -> Uri.parse(s)
+    }
+    fun vibrate(c: Context): Boolean = p(c).getBoolean("vibrate", true)
+    fun setVibrate(c: Context, on: Boolean) { p(c).edit().putBoolean("vibrate", on).apply() }
+    fun ringSecs(c: Context): Int = p(c).getInt("ring_secs", 120)
+    fun setRingSecs(c: Context, s: Int) { p(c).edit().putInt("ring_secs", s).apply() }
+    fun ringMs(c: Context): Long = ringSecs(c) * 1000L
+
+    // ---- study goal / buddy ----
+    fun goalMin(c: Context): Int = p(c).getInt("goal_min", 120)
+    fun setGoalMin(c: Context, m: Int) { p(c).edit().putInt("goal_min", m).apply() }
+    fun buddy(c: Context): Boolean = p(c).getBoolean("buddy", true)
+    fun setBuddy(c: Context, on: Boolean) { p(c).edit().putBoolean("buddy", on).apply() }
 
     fun lastMinutes(c: Context): Int = p(c).getInt("minutes", 45)
     fun setLastMinutes(c: Context, m: Int) { p(c).edit().putInt("minutes", m).apply() }
@@ -58,7 +86,7 @@ object Store {
     /** True while the "time's up" alarm is sounding. Expires on its own as a safety net. */
     fun isRinging(c: Context): Boolean {
         val since = p(c).getLong("ringing_since", 0L)
-        return since != 0L && System.currentTimeMillis() - since < RING_WINDOW_MS
+        return since != 0L && System.currentTimeMillis() - since < ringMs(c) + 30_000L
     }
 
     fun setRinging(c: Context, on: Boolean) {
