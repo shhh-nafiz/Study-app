@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.util.TypedValue
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.LinearLayout
@@ -21,6 +22,9 @@ object C {
 }
 
 fun Context.dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
+
+fun Context.sp(v: Float): Float =
+    TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, v, resources.displayMetrics)
 
 fun Context.tv(s: String, sp: Float, color: Int = C.TEXT, bold: Boolean = false): TextView =
     TextView(this).apply {

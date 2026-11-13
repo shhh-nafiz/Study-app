@@ -11,3 +11,12 @@ GET THE APK (no coding), easiest way:
    you get app-debug.apk. Copy it to your phone and install it.
 
 OR: install Android Studio, open this folder, press Run (or Build > Build APK).
+
+WHAT'S NEW IN 1.1
+- Timer no longer runs past zero; it now ends exactly on time even with the screen off.
+- Alarm rings (alarm volume + vibration) when the timer finishes. Tap "Stop alarm".
+- Pick the time like an alarm clock: spin the hours and minutes wheels (1-minute steps).
+- Study log shows dated sessions and a 7-day / 30-day bar chart.
+
+NOTE: if installing over your old version fails ("App not installed"), uninstall the old
+one first (the old study log will be reset), then install the new APK.
